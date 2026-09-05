@@ -36,236 +36,301 @@ A production-style DevOps/MLOps project that provisions an AWS EC2 instance usin
                                ▼
                          Public API
                        Port 8000 / HTTP
-🛠️ Tech Stack
+```
 
-* AWS EC2 — Application hosting
-* Terraform — Infrastructure as Code
-* Docker — Application containerization
-* FastAPI — REST API
-* Uvicorn — ASGI server
-* Ubuntu 24.04 — EC2 operating system
-* Bash — Health monitoring script
-* Cron — Scheduled health monitoring
-* Git/GitHub — Version control
+## 🛠️ Tech Stack
 
-✨ Features
+- **AWS EC2** — Application hosting
+- **Terraform** — Infrastructure as Code
+- **Docker** — Application containerization
+- **FastAPI** — REST API
+- **Uvicorn** — ASGI server
+- **Ubuntu 24.04** — EC2 operating system
+- **Bash** — Health monitoring script
+- **Cron** — Scheduled health monitoring
+- **Git/GitHub** — Version control
 
-Infrastructure as Code
+## ✨ Features
+
+### Infrastructure as Code
 
 Terraform provisions:
 
-* AWS EC2 instance
-* Ubuntu 24.04 AMI
-* SSH key pair
-* Security group
-* Docker installation
-* Application deployment
+- AWS EC2 instance
+- Ubuntu 24.04 AMI
+- SSH key pair
+- Security group
+- Docker installation
+- Application deployment
 
-Containerized FastAPI Application
+### Containerized FastAPI Application
 
-The API runs inside a Docker container:mlops-api
+The API runs inside a Docker container named:
 
-    └── FastAPI
+```text
+mlops-api
+```
 
-         ├── /
+The container exposes port `8000`.
 
-         └── /health
-API Endpoints
+### API Endpoints
 
-GET /
-
-Returns:{
-
-  "message": "MLOps API is running!",
-
-  "status": "healthy"
-
-}
-GET /health
-
-Returns:{
-  "message": "MLOps API is running!",
-  "status": "healthy"
-}
-GET /health
+#### `GET /`
 
 Returns:
+
+```json
 {
-
+  "message": "MLOps API is running!",
   "status": "healthy"
-
 }
-The /health endpoint is also used by Docker’s container healthcheck.
+```
 
-❤️ Health Monitoring & Self-Healing
+#### `GET /health`
 
-The Docker container has a built-in healthcheck:Every 30 seconds
+Returns:
 
-       ↓
+```json
+{
+  "status": "healthy"
+}
+```
 
-GET /health
+The `/health` endpoint is also used by Docker's container healthcheck.
 
-       ↓
+## ❤️ Health Monitoring & Self-Healing
 
-healthy?
+The Docker container has a built-in healthcheck that runs every 30 seconds.
 
-   ↙       ↘
+```text
+             Docker Container
+                    │
+                    ▼
+              GET /health
+                    │
+              ┌─────┴─────┐
+              │           │
+           healthy     unhealthy
+              │           │
+              ▼           ▼
+          Continue     Unhealthy
+```
 
- YES       NO
-
-  ↓         ↓
-
-Continue   Docker
-
-           health status
 A separate Bash script provides an additional layer of monitoring.
 
-Every 5 minutes, Cron executes:/opt/mlops-app/healthcheck.sh
+Every 5 minutes, Cron executes:
+
+```bash
+/opt/mlops-app/healthcheck.sh
+```
+
 The script:
 
-1. Checks whether the mlops-api container is running.
+1. Checks whether the `mlops-api` container is running.
 2. Checks its Docker health status.
-3. Restarts the container if it is stopped or unhealthy.
+3. Starts the container if it is stopped.
+4. Restarts the container if it is unhealthy.
 
-The container also uses:--restart unless-stopped
-Security
+The container also uses:
 
-The EC2 security group exposes:Port
+```text
+--restart unless-stopped
+```
 
-Purpose
+This provides an additional Docker-level recovery mechanism.
 
-Access
+## 🔐 Security
 
-22
+The EC2 security group exposes:
 
-SSH
+| Port | Purpose | Access |
+|------|---------|--------|
+| 22 | SSH | Administrator IP only |
+| 8000 | FastAPI | Public |
 
-Restricted to administrator IP
+SSH access is restricted using a `/32` CIDR rule rather than exposing SSH to the entire internet.
 
-8000
+## 📁 Project Structure
 
-FastAPI
-
-Public
-SSH access is restricted using a /32 CIDR rule rather than exposing port 22 to the entire internet.
-Project Structure
+```text
 mlops-terraform-aws/
-
 │
-
 ├── app/
-
 │   ├── Dockerfile
-
 │   ├── main.py
-
 │   └── requirements.txt
-
 │
-
 ├── scripts/
-
 │   └── healthcheck.sh
-
 │
-
 ├── terraform/
-
 │   ├── main.tf
-
 │   ├── variables.tf
-
 │   ├── outputs.tf
-
 │   └── .terraform.lock.hcl
-
 │
-
 ├── .gitignore
-
 └── README.md
-Deployment
+```
 
-Prerequisites
+## 🚀 Deployment
+
+### Prerequisites
 
 Install/configure:
 
-* Terraform
-* AWS CLI
-* Docker
-* Git
-* An AWS account
-* An SSH key pair
-Initialize Terraformcd terraform
+- Terraform
+- AWS CLI
+- Docker
+- Git
+- An AWS account
+- An SSH key pair
 
+### Initialize Terraform
+
+```bash
+cd terraform
 terraform init
-Validate configuration terraform fmt
+```
 
+### Format and validate
+
+```bash
+terraform fmt
 terraform validate
-Preview infrastructure changes terraform plan
-Deploy terraform apply
-Confirm with: yes
-View outputs terraform output 
-Testing
+```
 
-Check the API: curl http://YOUR_EC2_IP:8000
-Check the health endpoint: curl http://YOUR_EC2_IP:8000/health
-Check the Docker container:
+### Preview infrastructure changes
+
+```bash
+terraform plan
+```
+
+### Deploy
+
+```bash
+terraform apply
+```
+
+Confirm with:
+
+```text
+yes
+```
+
+### View outputs
+
+```bash
+terraform output
+```
+
+Terraform provides:
+
+```text
+ec2_public_ip
+api_url
+health_url
+```
+
+## 🧪 Testing
+
+### Test the API
+
+```bash
+curl http://YOUR_EC2_IP:8000
+```
+
+### Test the health endpoint
+
+```bash
+curl http://YOUR_EC2_IP:8000/health
+```
+
+### Check the Docker container
+
+```bash
 sudo docker ps
-Expected: mlops-api
-Check container health: sudo docker inspect \
+```
 
+Expected container:
+
+```text
+mlops-api
+```
+
+### Check container health
+
+```bash
+sudo docker inspect \
   --format='{{.State.Health.Status}}' \
-
   mlops-api
-Expected:healthy
- Self-Healing Test
+```
 
-The monitoring system can be tested by stopping the container:
+Expected:
+
+```text
+healthy
+```
+
+## 🔄 Self-Healing Test
+
+Stop the container:
+
+```bash
 sudo docker stop mlops-api
-The Cron healthcheck detects that the container is no longer running and starts it again.
+```
 
-The Docker restart policy provides an additional recovery mechanism.
-Cleanup
+The Cron healthcheck detects that the container is no longer running and starts it again during the next scheduled execution.
+
+The Docker restart policy also provides automatic recovery.
+
+## 🧹 Cleanup
 
 When the project is no longer needed, destroy the AWS infrastructure:
-cd terraform
 
+```bash
+cd terraform
 terraform destroy
-Confirm with: yes
+```
+
+Confirm with:
+
+```text
+yes
+```
+
 This prevents unnecessary AWS charges.
 
-📌 What This Project Demonstrates
+## 📌 What This Project Demonstrates
 
 This project demonstrates practical experience with:
 
-* Infrastructure as Code
-* AWS cloud infrastructure
-* Terraform provisioning
-* EC2 administration
-* Docker containerization
-* REST API deployment
-* Linux automation
-* Health monitoring
-* Self-healing infrastructure
-* Security-group configuration
-* Git/GitHub workflows
+- Infrastructure as Code
+- AWS cloud infrastructure
+- Terraform provisioning
+- EC2 administration
+- Docker containerization
+- REST API deployment
+- Linux automation
+- Health monitoring
+- Self-healing infrastructure
+- Security-group configuration
+- Git/GitHub workflows
 
-🔮 Future Improvements
+## 🔮 Future Improvements
 
 Potential next steps:
 
-* GitHub Actions CI/CD
-* Amazon ECR for Docker image storage
-* Automated image deployment
-* HTTPS with a domain and reverse proxy
-* CloudWatch monitoring and logging
-* Infrastructure modules
-* Remote Terraform state using S3
-* Automated testing
-* Model-serving capabilities
+- GitHub Actions CI/CD
+- Amazon ECR for Docker image storage
+- Automated image deployment
+- HTTPS with a domain and reverse proxy
+- CloudWatch monitoring and logging
+- Infrastructure modules
+- Remote Terraform state using S3
+- Automated testing
+- Model-serving capabilities
 
-⸻
+---
 
 Built as a hands-on MLOps/DevOps learning project.
-
